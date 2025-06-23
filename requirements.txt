@@ -1,0 +1,6 @@
+PySimpleGUI
+pyaudio
+requests
+python-dotenv
+keyboard
+pyperclip
