@@ -32,6 +32,10 @@ class TranscriptionGUI:
                 sg.Text("00:00:00", key="-TIMER-", size=(10,1), justification="right")
             ],
             [
+                sg.Text("Reference:", size=(10,1), font=("Helvetica", 8)),
+                sg.Text("Not loaded", key="-REFERENCE_STATUS-", size=(20,1), font=("Helvetica", 8), text_color="gray")
+            ],
+            [
                 sg.Button("Start Recording", key="-START_BUTTON-", expand_x=True),
                 sg.Button("Stop Recording", key="-STOP_BUTTON-", expand_x=True, disabled=True)
             ],
@@ -99,6 +103,12 @@ class TranscriptionGUI:
             # For now, we'll just update. Clearing will be part of event loop.
             logger.info(f"Status bar: {message}")
 
+    def update_reference_status(self, status_text: str, color: str = "green"):
+        """Update the reference file status display"""
+        if self.window:
+            self.window["-REFERENCE_STATUS-"].update(value=status_text, text_color=color)
+            logger.debug(f"Reference status updated to: {status_text}")
+
 
     def _handle_gui_queue_updates(self):
         """Process messages from the GUI queue."""
@@ -116,6 +126,8 @@ class TranscriptionGUI:
                     self.enable_stop_button(data.get("stop_enabled", False))
                 elif message_type == "show_status_message":
                     self.show_status_message(data.get("text"), data.get("duration", 3000))
+                elif message_type == "update_reference_status":
+                    self.update_reference_status(data.get("text"), data.get("color", "green"))
                 # Add more message types as needed
                 self.gui_queue.task_done()
         except queue.Empty:

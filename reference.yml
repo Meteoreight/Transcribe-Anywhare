@@ -1,0 +1,21 @@
+# Reference file for better transcription accuracy
+# Place this file in the project root directory
+
+# Technical terminology with definitions
+terminology:
+  API: Application Programming Interface
+  ML: Machine Learning
+  AI: Artificial Intelligence
+  UI: User Interface
+  UX: User Experience
+  CI/CD: Continuous Integration/Continuous Deployment
+  REST: Representational State Transfer
+  JSON: JavaScript Object Notation
+  HTTP: HyperText Transfer Protocol
+  HTTPS: HyperText Transfer Protocol Secure
+
+# Context of the conversation or domain
+context: "Technical discussion about software development and programming"
+
+# Preferred transcription style
+style: "Use formal language, expand abbreviations when appropriate, and maintain technical accuracy"

@@ -38,6 +38,7 @@ class TranscriptionApp:
         self.audio_capture_active = False # To control the audio capture loop explicitly
 
         self._setup_callbacks()
+        self._update_reference_status()
         logger.info("Application initialized.")
 
     def _setup_callbacks(self):
@@ -58,6 +59,11 @@ class TranscriptionApp:
 
     def _show_gui_status_message(self, text, duration=3000):
         self.gui.gui_queue.put(("show_status_message", {"text": text, "duration": duration}))
+
+    def _update_reference_status(self):
+        """Update the reference file status in the GUI"""
+        status_text, color = self.transcriber.get_reference_status()
+        self.gui.gui_queue.put(("update_reference_status", {"text": status_text, "color": color}))
 
     def _timer_thread_func(self):
         logger.debug("Timer thread started.")

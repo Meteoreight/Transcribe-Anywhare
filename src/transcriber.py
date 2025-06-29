@@ -1,5 +1,6 @@
 import os
 import requests
+import yaml
 from dotenv import load_dotenv
 from .logger_setup import get_logger
 
@@ -9,7 +10,7 @@ class OpenAITranscriber:
     def __init__(self):
         load_dotenv()  # Load environment variables from .env
         self.api_key = os.getenv("OPENAI_API_KEY")
-        self.model_name = os.getenv("MODEL_NAME", "gpt-4o") # Default to gpt-4o if not set
+        self.model_name = os.getenv("MODEL_NAME", "gpt-4o-mini-transcribe") # Default to gpt-4o-mini-transcribe if not set
 
         if not self.api_key or self.api_key == "YOUR_OPENAI_API_KEY_HERE":
             logger.error("OPENAI_API_KEY not found or not set in .env file. Please set it to use OpenAI transcription.")
@@ -19,6 +20,67 @@ class OpenAITranscriber:
         # The new audio transcriptions endpoint for gpt-4o is slightly different
         # It's recommended to use the /v1/audio/transcriptions endpoint
         self.api_url = "https://api.openai.com/v1/audio/transcriptions"
+        
+        # Load reference YAML if it exists
+        self.reference_context = self._load_reference_yaml()
+
+    def _load_reference_yaml(self):
+        """Load reference.yml from project root if it exists"""
+        reference_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "reference.yml")
+        if os.path.exists(reference_path):
+            try:
+                with open(reference_path, 'r', encoding='utf-8') as f:
+                    reference_data = yaml.safe_load(f)
+                    logger.info(f"Loaded reference context from {reference_path}")
+                    return reference_data
+            except Exception as e:
+                logger.warning(f"Failed to load reference.yml: {e}")
+        return None
+
+    def get_reference_status(self):
+        """Get the status of reference.yml loading for UI display"""
+        if self.reference_context:
+            terms_count = len(self.reference_context.get('terminology', {}))
+            has_context = bool(self.reference_context.get('context'))
+            has_style = bool(self.reference_context.get('style'))
+            
+            status_parts = []
+            if terms_count > 0:
+                status_parts.append(f"{terms_count} terms")
+            if has_context:
+                status_parts.append("context")
+            if has_style:
+                status_parts.append("style")
+            
+            return f"Loaded ({', '.join(status_parts)})", "green"
+        else:
+            return "Not loaded", "gray"
+
+    def _build_prompt_with_reference(self):
+        """Build a prompt string with reference context if available"""
+        if not self.reference_context:
+            return None
+        
+        prompt_parts = []
+        
+        if 'terminology' in self.reference_context:
+            terms = self.reference_context['terminology']
+            if terms:
+                prompt_parts.append("Use these specific terms when transcribing:")
+                for term, description in terms.items():
+                    prompt_parts.append(f"- {term}: {description}")
+        
+        if 'context' in self.reference_context:
+            context = self.reference_context['context']
+            if context:
+                prompt_parts.append(f"Context: {context}")
+        
+        if 'style' in self.reference_context:
+            style = self.reference_context['style']
+            if style:
+                prompt_parts.append(f"Style: {style}")
+        
+        return "\n".join(prompt_parts) if prompt_parts else None
 
     def transcribe_audio(self, audio_file_path):
         if not self.api_key or self.api_key == "YOUR_OPENAI_API_KEY_HERE":
@@ -37,6 +99,12 @@ class OpenAITranscriber:
             "file": (os.path.basename(audio_file_path), open(audio_file_path, 'rb'), "audio/wav"),
             "model": (None, self.model_name) # Correctly send model as part of multipart
         }
+        
+        # Add prompt if reference context is available
+        prompt = self._build_prompt_with_reference()
+        if prompt:
+            files["prompt"] = (None, prompt)
+            logger.debug(f"Using reference prompt: {prompt[:100]}...")
 
         # Parameters for transcription (optional, but good to be aware of)
         # data = {
