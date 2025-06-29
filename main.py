@@ -3,7 +3,7 @@ import threading
 import os
 import sys
 from enum import Enum, auto
-from dotenv import load_dotenv # Added for the __main__ block API key check
+from dotenv import load_dotenv
 
 # Ensure src directory is in path for module imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
@@ -226,7 +226,7 @@ class TranscriptionApp:
                 if self.recorder and self.recorder.is_recording:
                     self.recorder.stop_recording()
             elif self.current_state == AppState.PROCESSING and self.recorder.is_recording :
-                 # If it was processing but somehow recorder still thinks it's on
+                # If it was processing but somehow recorder still thinks it's on
                 if self.recorder and self.recorder.is_recording:
                     self.recorder.stop_recording()
 
