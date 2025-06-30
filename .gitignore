@@ -1,0 +1,16 @@
+# Recordings directory
+recordings/
+
+# Log files
+logs/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+
+# Configuration files
+reference.yml
