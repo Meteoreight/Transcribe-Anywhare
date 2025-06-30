@@ -3,6 +3,7 @@ import requests
 import yaml
 from dotenv import load_dotenv
 from .logger_setup import get_logger
+from .audio_processor import AudioProcessor
 
 logger = get_logger(__name__)
 
@@ -23,6 +24,9 @@ class OpenAITranscriber:
         
         # Load reference YAML if it exists
         self.reference_context = self._load_reference_yaml()
+        
+        # Initialize audio processor for speed conversion
+        self.audio_processor = AudioProcessor()
 
     def _load_reference_yaml(self):
         """Load reference.yml from project root if it exists"""
@@ -82,7 +86,7 @@ class OpenAITranscriber:
         
         return "\n".join(prompt_parts) if prompt_parts else None
 
-    def transcribe_audio(self, audio_file_path):
+    def transcribe_audio(self, audio_file_path, use_x2_speed=False):
         if not self.api_key or self.api_key == "YOUR_OPENAI_API_KEY_HERE":
             logger.error("Cannot transcribe: OPENAI_API_KEY is not configured.")
             return None, "OPENAI_API_KEY not configured"
@@ -91,12 +95,21 @@ class OpenAITranscriber:
             logger.error(f"Audio file not found: {audio_file_path}")
             return None, "Audio file not found"
 
+        # Process audio for x2 speed if requested
+        processing_file_path = audio_file_path
+        temp_file_created = False
+        
+        if use_x2_speed:
+            logger.info("x2 Speed mode enabled - converting audio to 2x speed")
+            processing_file_path = self.audio_processor.convert_to_x2_speed(audio_file_path)
+            temp_file_created = (processing_file_path != audio_file_path)
+
         headers = {
             "Authorization": f"Bearer {self.api_key}"
         }
 
         files = {
-            "file": (os.path.basename(audio_file_path), open(audio_file_path, 'rb'), "audio/wav"),
+            "file": (os.path.basename(processing_file_path), open(processing_file_path, 'rb'), "audio/wav"),
             "model": (None, self.model_name) # Correctly send model as part of multipart
         }
         
@@ -115,7 +128,8 @@ class OpenAITranscriber:
         # }
 
         try:
-            logger.info(f"Sending {audio_file_path} to OpenAI for transcription using model {self.model_name}...")
+            speed_info = " (x2 speed)" if use_x2_speed else ""
+            logger.info(f"Sending {processing_file_path} to OpenAI for transcription using model {self.model_name}{speed_info}...")
             response = requests.post(self.api_url, headers=headers, files=files) # Removed data=data, model is in files
             response.raise_for_status()  # Raises an HTTPError for bad responses (4XX or 5XX)
 
@@ -126,7 +140,7 @@ class OpenAITranscriber:
                 logger.error(f"Transcription failed. API response did not contain 'text'. Response: {result}")
                 return None, f"Transcription failed (no text in response)"
 
-            logger.info("Transcription successful.")
+            logger.info(f"Transcription successful{speed_info}.")
             return transcript, None  # transcript, error_message (None if no error)
 
         except requests.exceptions.RequestException as e:
@@ -138,6 +152,10 @@ class OpenAITranscriber:
         except Exception as e:
             logger.error(f"An unexpected error occurred during transcription: {e}")
             return None, f"Unexpected error: {str(e)}"
+        finally:
+            # Clean up temporary file if created
+            if temp_file_created:
+                self.audio_processor.cleanup_temp_file(processing_file_path)
 
 if __name__ == '__main__':
     # This example assumes you have a .env file with your OPENAI_API_KEY

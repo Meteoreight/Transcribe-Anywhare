@@ -1,7 +1,8 @@
-PySimpleGUI
+flet
 pyaudio
 requests
 python-dotenv
 keyboard
 pyperclip
 PyYAML
+pydub

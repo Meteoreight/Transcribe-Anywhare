@@ -54,8 +54,8 @@ class TranscriptionApp:
     def _update_gui_transcript(self, text):
         self.gui.gui_queue.put(("update_transcript", text))
 
-    def _set_gui_button_states(self, start_enabled, stop_enabled):
-        self.gui.gui_queue.put(("set_button_states", {"start_enabled": start_enabled, "stop_enabled": stop_enabled}))
+    def _set_gui_button_states(self, record_enabled):
+        self.gui.gui_queue.put(("set_button_states", {"record_enabled": record_enabled}))
 
     def _show_gui_status_message(self, text, duration=3000):
         self.gui.gui_queue.put(("show_status_message", {"text": text, "duration": duration}))
@@ -107,7 +107,7 @@ class TranscriptionApp:
             self.current_state = AppState.RECORDING
             self.recording_start_time = time.time()
             self._update_gui_status(STATUS_RECORDING, "red")
-            self._set_gui_button_states(start_enabled=False, stop_enabled=True)
+            self._set_gui_button_states(record_enabled=True)
             self._show_gui_status_message("Recording started...")
 
             threading.Thread(target=self._timer_thread_func, daemon=True).start()
@@ -119,7 +119,7 @@ class TranscriptionApp:
             self.current_state = AppState.IDLE # Revert to IDLE
             self._update_gui_status(STATUS_ERROR + ": Mic?", "orange")
             self._show_gui_status_message("Failed to start recording. Check microphone.", duration=5000)
-            self._set_gui_button_states(start_enabled=True, stop_enabled=False) # Ensure buttons are reset
+            self._set_gui_button_states(record_enabled=True) # Ensure button is reset
             logger.error("Failed to start recording (recorder.start_recording returned False).")
 
     def stop_recording_and_process(self):
@@ -137,7 +137,7 @@ class TranscriptionApp:
         self.recording_filepath = self.recorder.stop_recording() # This also saves the file
 
         self._update_gui_status(STATUS_TRANSCRIBING, "yellow")
-        self._set_gui_button_states(start_enabled=False, stop_enabled=False) # Disable both during processing
+        self._set_gui_button_states(record_enabled=False) # Disable button during processing
         self._update_gui_timer("00:00:00") # Reset timer display
         self._show_gui_status_message("Recording stopped. Transcribing...")
 
@@ -149,12 +149,18 @@ class TranscriptionApp:
             self._update_gui_status(STATUS_ERROR + ": Save Fail", "red")
             self._show_gui_status_message("Error saving/finding recording file.", duration=5000)
             self.current_state = AppState.IDLE # Revert to IDLE
-            self._set_gui_button_states(start_enabled=True, stop_enabled=False)
+            self._set_gui_button_states(record_enabled=True)
 
 
     def _transcribe_and_update(self, audio_path):
         logger.info(f"Starting transcription for {audio_path}...")
-        transcript, error_msg = self.transcriber.transcribe_audio(audio_path)
+        
+        # Check if x2 speed mode is enabled
+        use_x2_speed = self.gui.get_x2_mode_enabled()
+        if use_x2_speed:
+            logger.info("x2 Speed mode enabled for transcription")
+        
+        transcript, error_msg = self.transcriber.transcribe_audio(audio_path, use_x2_speed=use_x2_speed)
 
         if error_msg:
             logger.error(f"Transcription failed: {error_msg}")
@@ -184,7 +190,7 @@ class TranscriptionApp:
         #         logger.error(f"Error deleting recording file {audio_path}: {e}")
 
         self.current_state = AppState.IDLE
-        self._set_gui_button_states(start_enabled=True, stop_enabled=False)
+        self._set_gui_button_states(record_enabled=True)
         logger.info("Processing finished. App back to IDLE state.")
 
 
@@ -241,13 +247,9 @@ if __name__ == "__main__":
     if not api_key or api_key == "YOUR_OPENAI_API_KEY_HERE":
         warning_message = "OPENAI_API_KEY is not set or is a placeholder in .env. Transcription will fail."
         logger.warning(warning_message)
-        # If PySimpleGUI is available, show a popup. This runs before GUI fully initializes.
-        try:
-            import PySimpleGUI as sg
-            sg.popup_error("OpenAI API Key Missing", warning_message, title="Configuration Error")
-        except Exception as e:
-            logger.error(f"Could not show API key warning popup: {e}")
-            print(f"WARNING: {warning_message}") # Fallback to console
+        # Show warning in console - Flet doesn't support popup before GUI initialization
+        print(f"WARNING: {warning_message}")
+        print("The application will start but transcription will fail without a valid API key.")
 
     if not model_name:
         logger.warning("MODEL_NAME not found in .env, will default to 'gpt-4o' in OpenAITranscriber.")
