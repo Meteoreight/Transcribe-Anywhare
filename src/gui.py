@@ -35,10 +35,10 @@ class TranscriptionGUI:
         self.timer_text = None
         self.reference_status = None
         self.x2_mode_checkbox = None
-        self.start_button = None
-        self.stop_button = None
+        self.record_button = None
         self.transcript_area = None
         self.status_bar = None
+        self.is_recording = False
 
     def _build_ui(self, page: ft.Page):
         page.title = APP_TITLE
@@ -52,6 +52,7 @@ class TranscriptionGUI:
             self.recording_status_text,
             size=16,
             weight=ft.FontWeight.BOLD,
+            color=ft.colors.BLACK87,
             expand=True
         )
         
@@ -72,17 +73,12 @@ class TranscriptionGUI:
             tooltip="Convert audio to 2x speed before transcription to reduce token usage"
         )
         
-        self.start_button = ft.ElevatedButton(
+        self.record_button = ft.ElevatedButton(
             "Start Recording",
-            on_click=self._on_start_click,
-            expand=True
-        )
-        
-        self.stop_button = ft.ElevatedButton(
-            "Stop Recording",
-            on_click=self._on_stop_click,
-            disabled=True,
-            expand=True
+            on_click=self._on_record_click,
+            expand=True,
+            bgcolor=ft.colors.GREEN_400,
+            color=ft.colors.WHITE
         )
         
         self.transcript_area = ft.TextField(
@@ -117,11 +113,8 @@ class TranscriptionGUI:
                 # x2 mode checkbox
                 self.x2_mode_checkbox,
                 
-                # Buttons row
-                ft.Row([
-                    self.start_button,
-                    self.stop_button
-                ], expand=True),
+                # Record button
+                self.record_button,
                 
                 # Transcript label
                 ft.Text("Last Transcript:", size=14, weight=ft.FontWeight.W_500),
@@ -136,17 +129,12 @@ class TranscriptionGUI:
         
         logger.info("GUI UI built.")
         
-    def _on_start_click(self, e):
-        logger.info("Start button clicked.")
-        if self.button_callback:
-            try:
-                self.button_callback()
-            except Exception as ex:
-                logger.error(f"Error executing button callback: {ex}", exc_info=True)
-                self.show_status_message(f"Error: {ex}")
-                
-    def _on_stop_click(self, e):
-        logger.info("Stop button clicked.")
+    def _on_record_click(self, e):
+        if self.is_recording:
+            logger.info("Stop recording button clicked.")
+        else:
+            logger.info("Start recording button clicked.")
+        
         if self.button_callback:
             try:
                 self.button_callback()
@@ -154,11 +142,27 @@ class TranscriptionGUI:
                 logger.error(f"Error executing button callback: {ex}", exc_info=True)
                 self.show_status_message(f"Error: {ex}")
 
-    def update_status_indicator(self, status: str, color: str = "white"):
+    def update_status_indicator(self, status: str, color: str = "black"):
         self.recording_status_text = status
         if self.status_indicator:
             self.status_indicator.value = status
-            self.status_indicator.color = color
+            if color == "red":
+                self.status_indicator.color = ft.colors.RED_600
+            elif color == "yellow":
+                self.status_indicator.color = ft.colors.AMBER_600
+            elif color == "orange":
+                self.status_indicator.color = ft.colors.ORANGE_600
+            else:
+                self.status_indicator.color = ft.colors.BLACK87
+            
+            # Update recording state and button appearance
+            if "Recording" in status:
+                self.is_recording = True
+                self._update_record_button()
+            elif status == STATUS_IDLE:
+                self.is_recording = False
+                self._update_record_button()
+            
             if self.page:
                 self.page.update()
             logger.debug(f"Status indicator updated to: {status}")
@@ -177,15 +181,25 @@ class TranscriptionGUI:
                 self.page.update()
             logger.debug("Transcript area updated.")
 
-    def enable_start_button(self, enabled: bool = True):
-        if self.start_button:
-            self.start_button.disabled = not enabled
+    def _update_record_button(self):
+        """Update the record button text and color based on current state"""
+        if self.record_button:
+            if self.is_recording:
+                self.record_button.text = "Stop Recording"
+                self.record_button.bgcolor = ft.colors.RED_400
+                self.record_button.color = ft.colors.WHITE
+            else:
+                self.record_button.text = "Start Recording"
+                self.record_button.bgcolor = ft.colors.GREEN_400
+                self.record_button.color = ft.colors.WHITE
+            
             if self.page:
                 self.page.update()
-
-    def enable_stop_button(self, enabled: bool = True):
-        if self.stop_button:
-            self.stop_button.disabled = not enabled
+    
+    def enable_record_button(self, enabled: bool = True):
+        """Enable or disable the record button"""
+        if self.record_button:
+            self.record_button.disabled = not enabled
             if self.page:
                 self.page.update()
 
@@ -224,8 +238,7 @@ class TranscriptionGUI:
                 elif message_type == "update_transcript":
                     self.update_transcript_area(data)
                 elif message_type == "set_button_states":
-                    self.enable_start_button(data.get("start_enabled", True))
-                    self.enable_stop_button(data.get("stop_enabled", False))
+                    self.enable_record_button(data.get("record_enabled", True))
                 elif message_type == "show_status_message":
                     self.show_status_message(data.get("text"), data.get("duration", 3000))
                 elif message_type == "update_reference_status":

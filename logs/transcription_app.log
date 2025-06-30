@@ -1,0 +1,20 @@
+2025-06-30 12:42:29,406 - INFO - gui - Starting Transcription GUI example...
+2025-06-30 12:42:29,408 - INFO - app - Assets path configured: /Users/ten/Documents/Transcribe-Anywhare/src/assets
+2025-06-30 12:42:49,086 - INFO - gui - Starting Transcription GUI example...
+2025-06-30 12:42:49,087 - INFO - app - Assets path configured: /Users/ten/Documents/Transcribe-Anywhare/src/assets
+2025-06-30 12:42:49,909 - INFO - app - Starting Flet web server on port 57600...
+2025-06-30 12:42:49,909 - INFO - flet_static_files - Web renderer configured: WebRenderer.CANVAS_KIT
+2025-06-30 12:42:49,910 - INFO - flet_static_files - Use color emoji: False
+2025-06-30 12:42:49,910 - INFO - flet_static_files - Route URL strategy configured: path
+2025-06-30 12:42:50,428 - INFO - flet_app_manager - Starting up Flet App Manager
+2025-06-30 12:42:50,428 - INFO - app - App URL: http://127.0.0.1:57600
+2025-06-30 12:42:51,154 - INFO - flet_static_files - Temp dir created for patched index and manifest: /var/folders/63/tqtmzsxs40xbrm00k53g7tgh0000gn/T/tmp3xsc2yt6
+2025-06-30 12:42:51,155 - INFO - flet_static_files - Web root: /Users/ten/Documents/Transcribe-Anywhare/.venv/lib/python3.12/site-packages/flet_web/web
+2025-06-30 12:42:51,155 - INFO - flet_static_files - assets_dir does not exist: /Users/ten/Documents/Transcribe-Anywhare/src/assets
+2025-06-30 12:42:51,155 - INFO - flet_static_files - Assets dir: None
+2025-06-30 12:42:53,175 - INFO - flet_app - New FletApp: XIdfzOVw
+2025-06-30 12:42:53,819 - INFO - flet_app_manager - New session created (1 total): _X7VT6oh1flJdOO7H_d3a7b8add0fe29970b543c45e21ccfe71295ab43
+2025-06-30 12:42:53,819 - INFO - flet_app - Start session: X7VT6oh1flJdOO7H
+2025-06-30 12:42:53,822 - INFO - gui - GUI UI built.
+2025-06-30 12:42:53,826 - INFO - gui - Status bar: Background task updated transcript.
+2025-06-30 12:44:11,792 - INFO - flet_app_manager - Session disconnected: _X7VT6oh1flJdOO7H_d3a7b8add0fe29970b543c45e21ccfe71295ab43

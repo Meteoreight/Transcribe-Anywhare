@@ -54,8 +54,8 @@ class TranscriptionApp:
     def _update_gui_transcript(self, text):
         self.gui.gui_queue.put(("update_transcript", text))
 
-    def _set_gui_button_states(self, start_enabled, stop_enabled):
-        self.gui.gui_queue.put(("set_button_states", {"start_enabled": start_enabled, "stop_enabled": stop_enabled}))
+    def _set_gui_button_states(self, record_enabled):
+        self.gui.gui_queue.put(("set_button_states", {"record_enabled": record_enabled}))
 
     def _show_gui_status_message(self, text, duration=3000):
         self.gui.gui_queue.put(("show_status_message", {"text": text, "duration": duration}))
@@ -107,7 +107,7 @@ class TranscriptionApp:
             self.current_state = AppState.RECORDING
             self.recording_start_time = time.time()
             self._update_gui_status(STATUS_RECORDING, "red")
-            self._set_gui_button_states(start_enabled=False, stop_enabled=True)
+            self._set_gui_button_states(record_enabled=True)
             self._show_gui_status_message("Recording started...")
 
             threading.Thread(target=self._timer_thread_func, daemon=True).start()
@@ -119,7 +119,7 @@ class TranscriptionApp:
             self.current_state = AppState.IDLE # Revert to IDLE
             self._update_gui_status(STATUS_ERROR + ": Mic?", "orange")
             self._show_gui_status_message("Failed to start recording. Check microphone.", duration=5000)
-            self._set_gui_button_states(start_enabled=True, stop_enabled=False) # Ensure buttons are reset
+            self._set_gui_button_states(record_enabled=True) # Ensure button is reset
             logger.error("Failed to start recording (recorder.start_recording returned False).")
 
     def stop_recording_and_process(self):
@@ -137,7 +137,7 @@ class TranscriptionApp:
         self.recording_filepath = self.recorder.stop_recording() # This also saves the file
 
         self._update_gui_status(STATUS_TRANSCRIBING, "yellow")
-        self._set_gui_button_states(start_enabled=False, stop_enabled=False) # Disable both during processing
+        self._set_gui_button_states(record_enabled=False) # Disable button during processing
         self._update_gui_timer("00:00:00") # Reset timer display
         self._show_gui_status_message("Recording stopped. Transcribing...")
 
@@ -149,7 +149,7 @@ class TranscriptionApp:
             self._update_gui_status(STATUS_ERROR + ": Save Fail", "red")
             self._show_gui_status_message("Error saving/finding recording file.", duration=5000)
             self.current_state = AppState.IDLE # Revert to IDLE
-            self._set_gui_button_states(start_enabled=True, stop_enabled=False)
+            self._set_gui_button_states(record_enabled=True)
 
 
     def _transcribe_and_update(self, audio_path):
@@ -190,7 +190,7 @@ class TranscriptionApp:
         #         logger.error(f"Error deleting recording file {audio_path}: {e}")
 
         self.current_state = AppState.IDLE
-        self._set_gui_button_states(start_enabled=True, stop_enabled=False)
+        self._set_gui_button_states(record_enabled=True)
         logger.info("Processing finished. App back to IDLE state.")
 
 
