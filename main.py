@@ -247,13 +247,9 @@ if __name__ == "__main__":
     if not api_key or api_key == "YOUR_OPENAI_API_KEY_HERE":
         warning_message = "OPENAI_API_KEY is not set or is a placeholder in .env. Transcription will fail."
         logger.warning(warning_message)
-        # If PySimpleGUI is available, show a popup. This runs before GUI fully initializes.
-        try:
-            import PySimpleGUI as sg
-            sg.popup_error("OpenAI API Key Missing", warning_message, title="Configuration Error")
-        except Exception as e:
-            logger.error(f"Could not show API key warning popup: {e}")
-            print(f"WARNING: {warning_message}") # Fallback to console
+        # Show warning in console - Flet doesn't support popup before GUI initialization
+        print(f"WARNING: {warning_message}")
+        print("The application will start but transcription will fail without a valid API key.")
 
     if not model_name:
         logger.warning("MODEL_NAME not found in .env, will default to 'gpt-4o' in OpenAITranscriber.")

@@ -1,4 +1,4 @@
-PySimpleGUI
+flet
 pyaudio
 requests
 python-dotenv
