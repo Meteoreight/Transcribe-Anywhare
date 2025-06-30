@@ -36,6 +36,10 @@ class TranscriptionGUI:
                 sg.Text("Not loaded", key="-REFERENCE_STATUS-", size=(20,1), font=("Helvetica", 8), text_color="gray")
             ],
             [
+                sg.Checkbox("x2 Speed Mode (Experimental)", key="-X2_MODE-", font=("Helvetica", 8), 
+                           tooltip="Convert audio to 2x speed before transcription to reduce token usage")
+            ],
+            [
                 sg.Button("Start Recording", key="-START_BUTTON-", expand_x=True),
                 sg.Button("Stop Recording", key="-STOP_BUTTON-", expand_x=True, disabled=True)
             ],
@@ -108,6 +112,12 @@ class TranscriptionGUI:
         if self.window:
             self.window["-REFERENCE_STATUS-"].update(value=status_text, text_color=color)
             logger.debug(f"Reference status updated to: {status_text}")
+
+    def get_x2_mode_enabled(self):
+        """Get the current state of x2 speed mode toggle"""
+        if self.window:
+            return self.window["-X2_MODE-"].get()
+        return False
 
 
     def _handle_gui_queue_updates(self):

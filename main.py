@@ -154,7 +154,13 @@ class TranscriptionApp:
 
     def _transcribe_and_update(self, audio_path):
         logger.info(f"Starting transcription for {audio_path}...")
-        transcript, error_msg = self.transcriber.transcribe_audio(audio_path)
+        
+        # Check if x2 speed mode is enabled
+        use_x2_speed = self.gui.get_x2_mode_enabled()
+        if use_x2_speed:
+            logger.info("x2 Speed mode enabled for transcription")
+        
+        transcript, error_msg = self.transcriber.transcribe_audio(audio_path, use_x2_speed=use_x2_speed)
 
         if error_msg:
             logger.error(f"Transcription failed: {error_msg}")
