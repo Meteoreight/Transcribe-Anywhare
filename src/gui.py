@@ -46,6 +46,7 @@ class TranscriptionGUI:
         page.window_resizable = True
         page.window_width = 600
         page.window_height = 500
+        
 
         # Initialize UI controls
         self.status_indicator = ft.Text(
@@ -113,8 +114,11 @@ class TranscriptionGUI:
                 # x2 mode checkbox
                 self.x2_mode_checkbox,
                 
-                # Record button
-                self.record_button,
+                # Record button (centered)
+                ft.Container(
+                    content=self.record_button,
+                    alignment=ft.alignment.center
+                ),
                 
                 # Transcript label
                 ft.Text("Last Transcript:", size=14, weight=ft.FontWeight.W_500),
@@ -259,7 +263,7 @@ class TranscriptionGUI:
             # Start background thread to handle queue updates
             threading.Thread(target=self._queue_update_worker, daemon=True).start()
             
-        ft.app(target=main, view=ft.WEB_BROWSER)
+        ft.app(target=main, port=0)
         logger.info("GUI event loop finished.")
         
     def _queue_update_worker(self):
