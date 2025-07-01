@@ -14,3 +14,6 @@ __pycache__/
 
 # Configuration files
 reference.yml
+logs/transcription_app.log
+reference.yml
+src/__pycache__/logger_setup.cpython-312.pyc

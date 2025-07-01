@@ -52,7 +52,7 @@ class TranscriptionGUI:
             self.recording_status_text,
             size=16,
             weight=ft.FontWeight.BOLD,
-            color=ft.colors.BLACK87,
+            color=ft.Colors.BLACK87,
             expand=True
         )
         
@@ -77,8 +77,8 @@ class TranscriptionGUI:
             "Start Recording",
             on_click=self._on_record_click,
             expand=True,
-            bgcolor=ft.colors.GREEN_400,
-            color=ft.colors.WHITE
+            bgcolor=ft.Colors.GREEN_400,
+            color=ft.Colors.WHITE
         )
         
         self.transcript_area = ft.TextField(
@@ -114,8 +114,11 @@ class TranscriptionGUI:
                 self.x2_mode_checkbox,
                 
                 # Record button
-                self.record_button,
-                
+                ft.Container(
+                    content=self.record_button,
+                    alignment=ft.alignment.center
+                ),
+
                 # Transcript label
                 ft.Text("Last Transcript:", size=14, weight=ft.FontWeight.W_500),
                 
@@ -147,13 +150,13 @@ class TranscriptionGUI:
         if self.status_indicator:
             self.status_indicator.value = status
             if color == "red":
-                self.status_indicator.color = ft.colors.RED_600
+                self.status_indicator.color = ft.Colors.RED_600
             elif color == "yellow":
-                self.status_indicator.color = ft.colors.AMBER_600
+                self.status_indicator.color = ft.Colors.AMBER_600
             elif color == "orange":
-                self.status_indicator.color = ft.colors.ORANGE_600
+                self.status_indicator.color = ft.Colors.ORANGE_600
             else:
-                self.status_indicator.color = ft.colors.BLACK87
+                self.status_indicator.color = ft.Colors.BLACK87
             
             # Update recording state and button appearance
             if "Recording" in status:
@@ -186,12 +189,12 @@ class TranscriptionGUI:
         if self.record_button:
             if self.is_recording:
                 self.record_button.text = "Stop Recording"
-                self.record_button.bgcolor = ft.colors.RED_400
-                self.record_button.color = ft.colors.WHITE
+                self.record_button.bgcolor = ft.Colors.RED_400
+                self.record_button.color = ft.Colors.WHITE
             else:
                 self.record_button.text = "Start Recording"
-                self.record_button.bgcolor = ft.colors.GREEN_400
-                self.record_button.color = ft.colors.WHITE
+                self.record_button.bgcolor = ft.Colors.GREEN_400
+                self.record_button.color = ft.Colors.WHITE
             
             if self.page:
                 self.page.update()
@@ -259,7 +262,7 @@ class TranscriptionGUI:
             # Start background thread to handle queue updates
             threading.Thread(target=self._queue_update_worker, daemon=True).start()
             
-        ft.app(target=main, view=ft.WEB_BROWSER)
+        ft.app(target=main)
         logger.info("GUI event loop finished.")
         
     def _queue_update_worker(self):
