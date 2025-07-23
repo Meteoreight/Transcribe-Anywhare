@@ -17,3 +17,6 @@ reference.yml
 logs/transcription_app.log
 reference.yml
 src/__pycache__/logger_setup.cpython-312.pyc
+reference.yml
+logs/transcription_app.log
+src/__pycache__/logger_setup.cpython-312.pyc
