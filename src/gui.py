@@ -44,7 +44,7 @@ class TranscriptionGUI:
         page.title = APP_TITLE
         page.theme_mode = ft.ThemeMode.LIGHT
         page.window_resizable = True
-        page.window_width = 600
+        page.window_width = 300
         page.window_height = 500
 
         # Initialize UI controls
