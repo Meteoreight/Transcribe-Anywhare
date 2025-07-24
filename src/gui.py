@@ -30,24 +30,37 @@ class TranscriptionGUI:
         # Queue for updates from other threads to the GUI
         self.gui_queue = queue.Queue()
 
-        # UI Controls
+        # UI Controls - Live Recording Tab
         self.status_indicator = None
         self.timer_text = None
         self.reference_status = None
         self.x2_mode_checkbox = None
         self.record_button = None
         self.transcript_area = None
+        
+        # UI Controls - File Mode Tab
+        self.file_picker_button = None
+        self.selected_file_text = None
+        self.output_dir_field = None
+        self.browse_dir_button = None
+        self.transcribe_file_button = None
+        self.file_transcript_area = None
+        
+        # Shared UI Controls
         self.status_bar = None
+        
+        # State variables
         self.is_recording = False
+        self.selected_file_path = None
 
     def _build_ui(self, page: ft.Page):
         page.title = APP_TITLE
         page.theme_mode = ft.ThemeMode.LIGHT
         page.window_resizable = True
-        page.window_width = 300
-        page.window_height = 500
+        page.window_width = 400
+        page.window_height = 600
 
-        # Initialize UI controls
+        # Initialize UI controls for live recording tab
         self.status_indicator = ft.Text(
             self.recording_status_text,
             size=16,
@@ -89,15 +102,60 @@ class TranscriptionGUI:
             max_lines=10
         )
         
+        # Initialize UI controls for file mode tab
+        self.file_picker_button = ft.ElevatedButton(
+            "Select Audio/Video File",
+            on_click=self._on_file_picker_click,
+            expand=True,
+            bgcolor=ft.Colors.BLUE_400,
+            color=ft.Colors.WHITE
+        )
+        
+        self.selected_file_text = ft.Text(
+            "No file selected",
+            size=12,
+            color="grey"
+        )
+        
+        self.output_dir_field = ft.TextField(
+            label="Output Directory",
+            value=self._get_default_downloads_path(),
+            expand=True
+        )
+        
+        self.browse_dir_button = ft.ElevatedButton(
+            "Browse",
+            on_click=self._on_browse_dir_click,
+            width=80
+        )
+        
+        self.transcribe_file_button = ft.ElevatedButton(
+            "Transcribe File",
+            on_click=self._on_transcribe_file_click,
+            expand=True,
+            bgcolor=ft.Colors.ORANGE_400,
+            color=ft.Colors.WHITE,
+            disabled=True
+        )
+        
+        self.file_transcript_area = ft.TextField(
+            multiline=True,
+            read_only=True,
+            expand=True,
+            min_lines=10,
+            max_lines=10
+        )
+        
         self.status_bar = ft.Text(
             "",
             size=12,
             color="blue"
         )
 
-        # Build the layout
-        page.add(
-            ft.Column([
+        # Build live recording tab content
+        live_recording_tab = ft.Tab(
+            text="Live Recording",
+            content=ft.Column([
                 # Status and timer row
                 ft.Row([
                     self.status_indicator,
@@ -124,13 +182,55 @@ class TranscriptionGUI:
                 
                 # Transcript area
                 self.transcript_area,
-                
-                # Status bar
-                self.status_bar
             ], expand=True, spacing=10)
         )
         
-        logger.info("GUI UI built.")
+        # Build file mode tab content
+        file_mode_tab = ft.Tab(
+            text="File Mode",
+            content=ft.Column([
+                # File picker section
+                ft.Text("Select Audio/Video File:", size=14, weight=ft.FontWeight.W_500),
+                self.file_picker_button,
+                self.selected_file_text,
+                
+                ft.Divider(),
+                
+                # Output directory section
+                ft.Text("Output Directory:", size=14, weight=ft.FontWeight.W_500),
+                ft.Row([
+                    self.output_dir_field,
+                    self.browse_dir_button
+                ]),
+                
+                # Transcribe button
+                ft.Container(
+                    content=self.transcribe_file_button,
+                    alignment=ft.alignment.center
+                ),
+                
+                ft.Divider(),
+                
+                # File transcript area
+                ft.Text("Transcript:", size=14, weight=ft.FontWeight.W_500),
+                self.file_transcript_area,
+            ], expand=True, spacing=10)
+        )
+
+        # Build main layout with tabs
+        page.add(
+            ft.Column([
+                ft.Tabs(
+                    tabs=[live_recording_tab, file_mode_tab],
+                    expand=True
+                ),
+                
+                # Status bar (shared across tabs)
+                self.status_bar
+            ], expand=True)
+        )
+        
+        logger.info("GUI UI built with tab functionality.")
         
     def _on_record_click(self, e):
         if self.is_recording:
@@ -228,6 +328,98 @@ class TranscriptionGUI:
             return self.x2_mode_checkbox.value
         return False
 
+    def _get_default_downloads_path(self):
+        """Get the default Downloads directory path for Windows"""
+        import os
+        return os.path.join(os.path.expanduser("~"), "Downloads")
+
+    def _on_file_picker_click(self, e):
+        """Handle file picker button click"""
+        logger.info("File picker button clicked.")
+        # For now, we'll create a basic file picker using Flet's FilePicker
+        file_picker = ft.FilePicker(
+            on_result=self._on_file_picked
+        )
+        self.page.overlay.append(file_picker)
+        self.page.update()
+        
+        file_picker.pick_files(
+            dialog_title="Select Audio/Video File",
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["wav", "mp3", "m4a", "mp4", "avi", "mov"]
+        )
+
+    def _on_file_picked(self, e: ft.FilePickerResultEvent):
+        """Handle file picker result"""
+        if e.files:
+            selected_file = e.files[0]
+            self.selected_file_path = selected_file.path
+            self.selected_file_text.value = f"Selected: {selected_file.name}"
+            self.selected_file_text.color = "black"
+            self.transcribe_file_button.disabled = False
+            logger.info(f"File selected: {self.selected_file_path}")
+        else:
+            self.selected_file_path = None
+            self.selected_file_text.value = "No file selected"
+            self.selected_file_text.color = "grey"
+            self.transcribe_file_button.disabled = True
+            logger.info("No file selected")
+        
+        if self.page:
+            self.page.update()
+
+    def _on_browse_dir_click(self, e):
+        """Handle browse directory button click"""
+        logger.info("Browse directory button clicked.")
+        # For now, we'll create a basic directory picker using Flet's FilePicker
+        dir_picker = ft.FilePicker(
+            on_result=self._on_directory_picked
+        )
+        self.page.overlay.append(dir_picker)
+        self.page.update()
+        
+        dir_picker.get_directory_path(dialog_title="Select Output Directory")
+
+    def _on_directory_picked(self, e: ft.FilePickerResultEvent):
+        """Handle directory picker result"""
+        if e.path:
+            self.output_dir_field.value = e.path
+            logger.info(f"Output directory selected: {e.path}")
+        else:
+            logger.info("No directory selected")
+        
+        if self.page:
+            self.page.update()
+
+    def _on_transcribe_file_click(self, e):
+        """Handle transcribe file button click"""
+        logger.info("Transcribe file button clicked.")
+        if self.selected_file_path and hasattr(self, 'file_transcribe_callback'):
+            try:
+                self.file_transcribe_callback(self.selected_file_path, self.output_dir_field.value)
+            except Exception as ex:
+                logger.error(f"Error executing file transcribe callback: {ex}", exc_info=True)
+                self.show_status_message(f"Error: {ex}")
+
+    def set_file_transcribe_callback(self, callback):
+        """Set the callback function for file transcription"""
+        self.file_transcribe_callback = callback
+
+    def update_file_transcript_area(self, text: str):
+        """Update the file transcript area with new text"""
+        if self.file_transcript_area:
+            self.file_transcript_area.value = text
+            if self.page:
+                self.page.update()
+            logger.debug("File transcript area updated.")
+
+    def enable_transcribe_file_button(self, enabled: bool = True):
+        """Enable or disable the transcribe file button"""
+        if self.transcribe_file_button:
+            self.transcribe_file_button.disabled = not enabled
+            if self.page:
+                self.page.update()
+
 
     def _handle_gui_queue_updates(self):
         """Process messages from the GUI queue."""
@@ -246,6 +438,10 @@ class TranscriptionGUI:
                     self.show_status_message(data.get("text"), data.get("duration", 3000))
                 elif message_type == "update_reference_status":
                     self.update_reference_status(data.get("text"), data.get("color", "green"))
+                elif message_type == "update_file_transcript":
+                    self.update_file_transcript_area(data)
+                elif message_type == "set_file_button_states":
+                    self.enable_transcribe_file_button(data.get("transcribe_enabled", True))
                 # Add more message types as needed
                 self.gui_queue.task_done()
         except queue.Empty:

@@ -42,8 +42,10 @@ class TranscriptionApp:
         logger.info("Application initialized.")
 
     def _setup_callbacks(self):
-        """Set up callbacks for hotkeys. GUI buttons are handled by passing toggle_recording_state."""
+        """Set up callbacks for hotkeys and GUI file transcription."""
         self.hotkey_manager.register_callback(self.toggle_recording_state)
+        # Set up file transcription callback for the GUI
+        self.gui.set_file_transcribe_callback(self.transcribe_file)
 
     def _update_gui_status(self, status_text, color="white"):
         self.gui.gui_queue.put(("update_status", {"text": status_text, "color": color}))
@@ -192,6 +194,140 @@ class TranscriptionApp:
         self.current_state = AppState.IDLE
         self._set_gui_button_states(record_enabled=True)
         logger.info("Processing finished. App back to IDLE state.")
+
+    def transcribe_file(self, file_path, output_dir):
+        """
+        Transcribe a selected audio/video file and save the result to the specified directory.
+        
+        Args:
+            file_path: Path to the audio/video file to transcribe
+            output_dir: Directory to save the transcription result
+        """
+        logger.info(f"Starting file transcription: {file_path}")
+        
+        # Update UI to show processing state
+        self._show_gui_status_message("Processing file...")
+        self.gui.gui_queue.put(("set_file_button_states", {"transcribe_enabled": False}))
+        self.gui.gui_queue.put(("update_file_transcript", "Processing..."))
+        
+        # Start transcription in a separate thread to avoid blocking the UI
+        threading.Thread(target=self._transcribe_file_worker, args=(file_path, output_dir), daemon=True).start()
+    
+    def _transcribe_file_worker(self, file_path, output_dir):
+        """
+        Worker method for file transcription that runs in a separate thread.
+        
+        Args:
+            file_path: Path to the audio/video file to transcribe
+            output_dir: Directory to save the transcription result
+        """
+        temp_files_to_cleanup = []
+        
+        try:
+            # Import audio processor here to avoid circular imports
+            from src.audio_processor import AudioProcessor
+            audio_processor = AudioProcessor()
+            
+            # Validate file format
+            if not audio_processor.is_supported_file(file_path):
+                error_msg = f"Unsupported file format: {os.path.basename(file_path)}"
+                logger.error(error_msg)
+                self._update_file_transcription_error(error_msg)
+                return
+            
+            # Prepare file for transcription (convert to WAV if needed)
+            self._show_gui_status_message("Converting file format...")
+            wav_path = audio_processor.prepare_file_for_transcription(file_path)
+            
+            # If a new file was created during conversion, mark it for cleanup
+            if wav_path != file_path:
+                temp_files_to_cleanup.append(wav_path)
+            
+            # Check if x2 speed mode is enabled
+            use_x2_speed = self.gui.get_x2_mode_enabled()
+            if use_x2_speed:
+                logger.info("x2 Speed mode enabled for file transcription")
+                self._show_gui_status_message("Converting to 2x speed...")
+                x2_wav_path = audio_processor.convert_to_x2_speed(wav_path)
+                if x2_wav_path != wav_path:
+                    temp_files_to_cleanup.append(x2_wav_path)
+                wav_path = x2_wav_path
+            
+            # Transcribe the audio
+            self._show_gui_status_message("Transcribing audio...")
+            transcript, error_msg = self.transcriber.transcribe_audio(wav_path, use_x2_speed=False)  # Already processed if needed
+            
+            if error_msg:
+                logger.error(f"File transcription failed: {error_msg}")
+                self._update_file_transcription_error(f"Transcription Error: {error_msg}")
+                return
+            elif transcript is not None:
+                logger.info("File transcription successful.")
+                
+                # Save transcript to file
+                self._save_transcript_to_file(transcript, file_path, output_dir)
+                
+                # Update UI with the transcript
+                self.gui.gui_queue.put(("update_file_transcript", transcript))
+                self._show_gui_status_message("File transcription completed successfully!")
+                
+            else:
+                logger.error("File transcription returned no transcript and no error message.")
+                self._update_file_transcription_error("Transcription failed: Unknown error.")
+                
+        except Exception as e:
+            logger.error(f"File transcription failed with exception: {e}", exc_info=True)
+            self._update_file_transcription_error(f"Error: {str(e)}")
+        finally:
+            # Clean up temporary files
+            if temp_files_to_cleanup:
+                from src.audio_processor import AudioProcessor
+                audio_processor = AudioProcessor()
+                for temp_file in temp_files_to_cleanup:
+                    audio_processor.cleanup_temp_file(temp_file)
+            
+            # Re-enable the transcribe button
+            self.gui.gui_queue.put(("set_file_button_states", {"transcribe_enabled": True}))
+            logger.info("File transcription process finished.")
+    
+    def _save_transcript_to_file(self, transcript, original_file_path, output_dir):
+        """
+        Save the transcript to a text file in the specified output directory.
+        
+        Args:
+            transcript: The transcribed text
+            original_file_path: Path to the original audio/video file
+            output_dir: Directory to save the transcript file
+        """
+        try:
+            # Ensure output directory exists
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Generate output filename based on original file
+            original_name = os.path.splitext(os.path.basename(original_file_path))[0]
+            output_filename = f"{original_name}_transcript.txt"
+            output_path = os.path.join(output_dir, output_filename)
+            
+            # Save transcript to file
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(transcript)
+            
+            logger.info(f"Transcript saved to: {output_path}")
+            self._show_gui_status_message(f"Transcript saved to: {output_filename}")
+            
+        except Exception as e:
+            logger.error(f"Failed to save transcript to file: {e}", exc_info=True)
+            self._show_gui_status_message(f"Warning: Failed to save transcript file: {str(e)}")
+    
+    def _update_file_transcription_error(self, error_message):
+        """
+        Update the UI with file transcription error information.
+        
+        Args:
+            error_message: The error message to display
+        """
+        self.gui.gui_queue.put(("update_file_transcript", f"Error: {error_message}"))
+        self._show_gui_status_message(error_message, duration=5000)
 
 
     def toggle_recording_state(self):
