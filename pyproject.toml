@@ -1,0 +1,15 @@
+[project]
+name = "transcribe-anywhere"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "flet==0.23.1",
+    "keyboard>=0.13.5",
+    "pyaudio>=0.2.14",
+    "pydub>=0.25.1",
+    "pyperclip>=1.9.0",
+    "python-dotenv>=1.1.1",
+    "pyyaml>=6.0.2",
+    "requests>=2.32.4",
+]
